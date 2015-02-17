@@ -2,7 +2,11 @@
 
 class Sitemap
 {
-	private $path, $xml, $nbURL, $maxURL = 50000;
+	private $path, $xml, $nbURL,
+			$xmlVersion = '1.0',
+			$preserveWhiteSpace = false,
+			$formatOutput = true,
+			$maxURL = 50000;
 
 	function __construct( $path = null )
 	{
@@ -21,6 +25,24 @@ class Sitemap
 		return $this;
 	}
 
+	public function setVersion( $version )
+	{
+		$this -> xmlVersion = $version;
+		return $this;
+	}
+
+	public function setPreserveWhiteSpace( $isPreserve = false )
+	{
+		$this -> preserveWhiteSpace = $isPreserve;
+		return $this;
+	}
+
+	public function setFormatOuput( $isOuput = true )
+	{
+		$this -> formatOutput = $isOuput;
+		return $this;
+	}
+
 	public function load()
 	{
 		if( !is_null( $this -> path ) )
@@ -33,12 +55,12 @@ class Sitemap
 			}
 			else
 			{
-			    exit( 'Echec lors de l\'ouverture du sitemap' );
+			    exit( "Echec lors de l'ouverture du sitemap" );
 			}
 		}
 		else
 		{
-			exit( 'Vous devez définir le chemin du fichier avec la méthode setPath ou directement lors de l\'instanciation' );
+			exit( "Vous devez définir le chemin du fichier avec la méthode setPath ou directement lors de l'instanciation" );
 		}
 
 		return $this;
@@ -48,7 +70,7 @@ class Sitemap
 	{
 		if( $this -> nbURL >= $this -> maxURL )
 		{
-			exit( 'Le nombre maximum d\'url a été atteint' );
+			exit( "Le nombre maximum d'URL a été atteint" );
 		}
 
 		return $this;
@@ -60,10 +82,10 @@ class Sitemap
 
 		if( is_null( $loc ) || is_null( $priority ) )
 		{
-			exit( 'Vous devez au moins renseigner l\'url et la priorité');
+			exit( "d" );
 		}
 
-		foreach( $this -> xml -> {'url'} as $url )
+		foreach( $this -> xml -> {'url'} as $url ) // no duplicates
 		{
 			if( $url -> loc == $loc )
 			{
@@ -73,21 +95,74 @@ class Sitemap
 		}
 
 		$changefreq = is_null( $changefreq ) ? 'monthly' : $changefreq; // default = monthly
-		$lastmod 	= is_null( $lastmod ) ? date( 'c' ) : $lastmod; // default = now
+		$lastmod 	= is_null( $lastmod ) ? date( 'c' ) : $lastmod; 	// default = now
 
 		$url = $this -> xml -> addChild('url');
-		$url -> addChild( 'loc', $loc );
-		$url -> addChild( 'lastmod', $lastmod );
+		$url -> addChild( 'loc', 		$loc );
+		$url -> addChild( 'lastmod', 	$lastmod );
 		$url -> addChild( 'changefreq', $changefreq );
-		$url -> addChild( 'priority', $priority );
+		$url -> addChild( 'priority', 	$priority );
 
 		$this -> nbURL++;
 		return $this;
 	}
 
+	public function edit( $loc_old = null, $loc = null, $priority = null, $changefreq = null, $lastmod = null )
+	{
+		$this -> checkURL();
+
+		if( is_null( $loc_old ) || is_null( $loc ) || is_null( $priority ) )
+		{
+			exit( "Vous devez au moins renseigner l'URL de remplacement, la nouvelle URL et la priorité" );
+		}
+
+		foreach( $this -> xml -> {'url'} as $url ) // search old loc
+		{
+			if( $url -> loc == $loc_old )
+			{
+				$changefreq = is_null( $changefreq ) ? 'monthly' : $changefreq; // default = monthly
+				$lastmod 	= is_null( $lastmod ) ? date( 'c' ) : $lastmod; 	// default = now
+
+				$url -> loc 		= $loc;
+				$url -> lastmod 	= $lastmod;
+				$url -> changefreq 	= $changefreq;
+				$url -> priority 	= $priority;
+			}
+		}
+
+		return $this;
+	}
+
+	public function remove( $loc = null )
+	{
+		if( is_null( $loc ) )
+		{
+			exit( "Vous devez renseigner l'URL à supprimer" );
+		}
+
+		$index = 0;
+		foreach( $this -> xml -> url as $url ) // search old loc
+		{
+			if( $url -> loc == $loc )
+			{
+				break;
+			}
+
+			$index++;
+		}
+
+		unset( $this -> xml -> url[ $index ] );
+
+		return $this;
+	}
+
 	public function save()
 	{
-		$this -> xml -> asXml( $this -> path );
+		$dom = dom_import_simplexml( $this -> xml ) -> ownerDocument; // Normally keep formatting
+		$dom -> preserveWhiteSpace 	= $this -> preserveWhiteSpace; //default = false;
+		$dom -> formatOutput 		= $this -> formatOutput; //defaut = true;
+		$dom -> save( $this -> path );
+		
 		return $this;
 	}
 }
